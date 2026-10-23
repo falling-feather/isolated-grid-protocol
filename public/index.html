@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101a22">
+  <meta name="description" content="连接电源、储能与负荷，设计微电网协议，运行测试检验真实后果。">
+  <title>孤网协议 · 电网工作台</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='5' fill='%23131e27'/%3E%3Cpath d='M10 10v20h7m13-20v20h-7M15 20h10' fill='none' stroke='%23eab95d' stroke-width='2.5'/%3E%3C/svg%3E">
+  <link rel="preload" as="image" href="./assets/solar.png">
+  <link rel="preload" as="image" href="./assets/wind.png">
+  <link rel="preload" as="image" href="./assets/battery.png">
+  <link rel="preload" as="image" href="./assets/bus.png">
+  <link rel="preload" as="image" href="./assets/critical.png">
+  <link rel="preload" as="image" href="./assets/residential.png">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./journey.css">
+  <link rel="stylesheet" href="./review.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 6v20h7m11-20v20h-7M12 16h8"/></svg><h1>孤网协议</h1></div>
+    <button id="open-missions" class="mission-switch" type="button" aria-label="打开任务航图"><span id="mission-number">00</span><strong id="mission-name">接线训练</strong><i aria-hidden="true">⌄</i></button>
+    <span id="work-status" class="work-status">载入工作台</span>
+    <div class="instruments" title="教学观察：此处显示物理实际状态，中央已收记录可在储能信息中查看">
+      <div><span class="instrument-label">频率</span><strong id="frequency">—</strong><small>Hz</small></div>
+      <div><span class="instrument-label">供电</span><strong id="service">—</strong><small>%</small></div>
+    </div>
+  </header>
+  <main id="workbench">
+    <div id="construction-layer" class="construction-layer">
+    <div class="canvas-key" aria-label="金色为电力线路，蓝色虚线为通信链路"><span class="power-key">电力线路</span><span class="message-key">通信链路</span></div>
+    <div id="trial-progress" class="trial-progress" aria-hidden="true"><i></i></div>
+    <svg id="grid" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid meet" role="region" aria-label="电网组网画布，拖动装置或连接端子" tabindex="0">
+      <defs>
+        <pattern id="grid-lines" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#334752" stroke-width=".5" opacity=".28"/></pattern>
+        <pattern id="major-lines" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#grid-lines)"/><path d="M100 0H0V100" fill="none" stroke="#36505d" stroke-width=".65" opacity=".3"/><path d="M-3 0H3M0-3V3" stroke="#5c7380" opacity=".32"/></pattern>
+      </defs>
+      <g id="world">
+        <rect class="grid-background" x="-3000" y="-2000" width="7440" height="4900" fill="url(#major-lines)"/>
+        <g id="scene"></g>
+        <path id="wire-preview" class="wire-preview"/>
+        <rect id="bend-handle" class="bend-handle" width="12" height="12" rx="1" aria-label="拖动调整线路绕行点"/>
+      </g>
+    </svg>
+    <button id="open-palette" class="palette-handle" type="button" aria-label="打开装置库与操作" aria-expanded="false"><span aria-hidden="true">＋</span></button>
+    <button id="run-test" class="run-button" type="button" disabled><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2 14 8 4 14Z"/></svg><span>运行测试</span></button>
+    <aside id="mission-dock" class="mission-dock" aria-label="当前任务与引导"></aside>
+    <div id="live-event" class="live-event" role="status" hidden><span class="live-event-dot"></span><span id="live-event-text"></span></div>
+    <aside id="palette" class="floating-panel palette" aria-labelledby="palette-title" hidden>
+      <header><h2 id="palette-title">装置与操作</h2><button class="icon-button" id="close-palette" type="button" aria-label="关闭装置库">×</button></header>
+      <div class="panel-content">
+        <nav class="panel-tabs" aria-label="装置库分页"><button type="button" data-palette-tab="devices" aria-selected="true">装置</button><button type="button" data-palette-tab="operations" aria-selected="false">操作</button><button type="button" data-palette-tab="settings" aria-selected="false">设置</button></nav>
+        <div data-palette-page="devices"><div id="device-catalog" class="device-catalog"></div></div>
+        <div data-palette-page="operations" hidden>
+        <div class="palette-actions"><button id="undo" type="button">撤销</button><button id="redo" type="button">重做</button><button id="arrange" type="button">整理布局</button><button id="fit-view" type="button">居中画布</button></div>
+        <div class="palette-learning"><button id="open-journey-map" type="button">任务航图 <span>↗</span></button><button id="open-handbook" type="button">概念手册 <span>↗</span></button></div>
+        <div class="tips"><p>拖动装置安排位置，拖动端子接线，也可依次点选两端。</p><p>点击装置调整参数；点击线路调整开关和绕行。</p><p>滚轮缩放，空白处拖动画布。方向键移动装置，Ctrl+Z 撤销，Esc 返回。</p></div>
+        <button id="restore-example" class="quiet-danger" type="button">恢复示例组网</button>
+        </div>
+        <div data-palette-page="settings" hidden>
+          <label class="field-row"><span>播放速度</span><select id="speed"><option value="auto">跟随关卡</option><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+          <p class="field-hint" id="playback-note"></p>
+          <label class="toggle-row"><span>减少动画</span><input id="reduce-motion" type="checkbox"></label>
+          <p class="field-hint">测试自动运行：云层经过后，下发一次储能调节。消息规则在储能中配置。</p>
+        </div>
+      </div>
+    </aside>
+    <aside id="inspector" class="floating-panel inspector" aria-labelledby="inspector-title" hidden>
+      <header><div><span id="inspector-kind" class="eyebrow"></span><h2 id="inspector-title" tabindex="-1">装置</h2></div><button id="close-inspector" class="icon-button" type="button" aria-label="关闭参数面板">×</button></header>
+      <div id="inspector-content" class="panel-content"></div>
+    </aside>
+    </div>
+    <section id="results" class="result-sheet" role="dialog" aria-modal="false" aria-labelledby="result-title" hidden>
+      <header class="result-heading"><div><span class="eyebrow">本次测试</span><h2 id="result-title" tabindex="-1">频率记录</h2></div><div class="result-clock"><span id="result-time" class="result-time">0.0 / 24.0 s</span><button id="pause-test" class="pause-button" type="button" aria-label="暂停测试">暂停</button><button id="return-grid" class="return-button" type="button">返回组网</button></div></header>
+      <nav id="review-tabs" class="review-tabs" aria-label="试验复盘分页"><button type="button" data-review-tab="overview" aria-selected="true">状态</button><button type="button" data-review-tab="messages" aria-selected="false">消息因果</button><button type="button" data-review-tab="goals" aria-selected="false" disabled>目标核验</button><button type="button" data-review-tab="compare" aria-selected="false" disabled>策略对照</button></nav>
+      <div class="review-content">
+      <div class="result-body" data-review-panel="overview">
+        <div class="plot-area">
+          <div id="knowledge-board" class="knowledge-board"><div class="truth-reading"><span>设备基准</span><strong id="truth-base">—</strong></div><div class="known-reading"><span>遥测基准</span><strong id="known-base">—</strong><small id="known-age">尚无记录</small></div><p id="known-result">执行结果仍未知</p></div>
+          <div class="plot-legend"><span class="amber-line">实际</span><span class="blue-line">中央所知</span><span class="gray-line" id="previous-legend" hidden>上次测试</span></div>
+          <p id="comparison-note" class="comparison-note" hidden></p>
+          <canvas id="frequency-chart" tabindex="0" role="img" aria-label="频率记录：测试中按空格暂停或继续，结束后用方向键回看"></canvas>
+          <div id="cursor-reading" class="cursor-reading">运行测试后，可沿曲线回看消息的影响。</div>
+        </div>
+        <div class="result-summary">
+          <div class="result-numbers"><div><span id="result-count-label">当前执行</span><strong id="result-count">0</strong><small>次</small></div><div><span id="result-service-label">当前供电</span><strong id="result-service">100</strong><small>%</small></div></div>
+          <p id="trial-context" class="trial-context"></p>
+          <button id="diagnosis" class="diagnosis" type="button" disabled>正在运行</button>
+          <div class="compact-metrics"><span>末段偏差 <b id="result-deviation">—</b></span><span>储能净消耗 <b id="result-energy">—</b></span></div>
+        </div>
+      </div>
+      <div data-review-panel="messages" hidden><div id="message-review"></div></div>
+      <div data-review-panel="goals" class="goals-page" hidden>
+        <section id="goal-evidence" class="goal-evidence"><h3 id="goal-summary">目标核验</h3><ul id="trial-goals"></ul></section>
+        <section id="goal-notes" class="goal-explanation" hidden><h3>本次说明</h3><p id="goal-explanation"></p><div id="rating-explanation" class="rating-explanation" hidden><h3>评级依据与提升目标</h3><ul id="rating-rules"></ul></div></section>
+        <div id="goal-pager" class="page-controls"></div>
+      </div>
+      <div data-review-panel="compare" hidden><div id="strategy-comparison"></div></div>
+      </div>
+      <footer class="review-footer"><div id="result-debrief" hidden><span id="trial-stars" class="trial-stars"></span><button id="next-mission" class="next-mission" type="button" hidden>下一站 →</button></div><button id="revise-rules" class="context-button" type="button">调整规则</button><a id="export-trial" class="export-trial" role="button" aria-label="导出本次实验" download hidden>导出 ↓</a></footer>
+    </section>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </main>
+  <div id="journey-overlay" class="journey-overlay" role="dialog" aria-modal="true" aria-labelledby="journey-title" hidden></div>
+  <noscript>需要 JavaScript 才能运行电网模拟。</noscript>
+  <script type="module" src="./app/main.js"></script>
+</body>
+</html>
